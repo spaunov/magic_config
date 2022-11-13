@@ -188,12 +188,8 @@ build on it and showcase further features.
 
 #### [Inheritance Example](examples/Inheritance.cpp)
 
-The example above shows how to get inheritance of multiple magic configs to work.
-It is a bit clunky at the moment. To make this use case more ergonomic, I have considered
-implementing variadic inheritance list for magic::Loader, however, I am wary of
-overcomplicating the implementation. For the time being I have provided helpers to facilitate
-inheritance, but generally I would suggest definition magic_config mappings for the top level
-config as per the Basic example above.
+The example above demonstrates the use case where one or more magic configs are inherited into
+the final config.
 
 #### [Basic Validation Example](examples/BasicValidation.cpp)
 

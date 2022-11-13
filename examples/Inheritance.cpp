@@ -23,28 +23,15 @@ struct EmployeeBase : MagicConfig<EmployeeBase>  // Derive from MagicConfig
 };
 
 // Extended Employee class with extra info
-struct Employee : EmployeeBase
-                , MagicConfig<Employee>  // Derive from MagicConfig
+// NOTE: Magic config wraps the inhertance in order to become aware of the
+//       inheritance chain and provide better ergonomics for this use case
+//       where multiple magic configs are combined via inheritance
+struct Employee : MagicConfig<Employee, EmployeeBase>
 {
-protected:
-    // NOTE: With multiple inheritance of MagicConfig it is required to
-    //       disambibuate which methods we are attempting to use below
-    using MagicConfig<Employee>::assign;
-    using MagicConfig<Employee>::load;
-public:
-    // Public interface:
-    using Config = typename MagicConfig<Employee>::Config;
-
     // Define a config mapping for the Employee class
     static void defineConfigMapping() {
-        // NOTE: No need to call EmployeeBase::defineConfigMapping()
-        //       It will be called as part of EmployeeBase::load()
-
         Employee::assign("phone", &Employee::phone);
     }
-
-    // NOTE: The variadic load helper we use here can take one or more base classes
-    static Employee load(const Config& config) { return Employee::load<EmployeeBase>(config); }
 
     // Members of this struct:
     std::string phone;

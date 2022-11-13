@@ -38,7 +38,7 @@ inline void VERIFY_CONFIG(bool                           predicate,
 template <typename Traits, typename Msg, typename Class>
 inline void VERIFY_CONFIG(bool                           predicate,
                           Msg&&                          msg,
-                          const Class*                   obj = nullptr,
+                          const Class*                   obj,
                           const typename Traits::Config* cfg = nullptr)
 {
     if (!predicate) {

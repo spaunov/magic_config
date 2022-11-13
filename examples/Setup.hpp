@@ -11,14 +11,14 @@ namespace magic_config { namespace examples {
 #ifndef MAGIC_CONFIG_EXAMPLES_USE_DYNAMIC_JSON
 
 // By default examples use YamlConfig:
-template <typename Derived>
-using MagicConfig = magic_config::yaml::YamlConfig<Derived>;
+template <typename Derived, typename... Bases>
+using MagicConfig = magic_config::yaml::YamlConfig<Derived, Bases...>;
 using Traits      = magic_config::yaml::YamlTraits;
 
 #else // Use JsonConfig instead
 
-template <typename Derived>
-using MagicConfig = magic_config::dynamic_json::JsonConfig<Derived>;
+template <typename Derived, typename... Bases>
+using MagicConfig = magic_config::dynamic_json::JsonConfig<Derived, Bases...>;
 using Traits      = magic_config::dynamic_json::JsonTraits;
 
 #endif

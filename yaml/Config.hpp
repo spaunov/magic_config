@@ -7,7 +7,11 @@
 
 namespace magic_config { namespace yaml {
 
-template <typename Derived>
-struct YamlConfig : magic::Loader<Derived, YamlTraits> {};
+// Description of arguments:
+//   Derived: The top level config class which inherits this functionality
+//     Bases: A list of base classes to be inherited into Derived, which are
+//            each also magic configs themselves.
+template <typename Derived, typename... Bases>
+struct YamlConfig : magic::Loader<YamlTraits, Derived, Bases...> {};
 
 }} // magic_config::yaml

@@ -7,7 +7,11 @@
 
 namespace magic_config { namespace dynamic_json {
 
-template <typename Derived>
-struct JsonConfig : magic::Loader<Derived, JsonTraits> {};
+// Description of arguments:
+//   Derived: The top level config class which inherits this functionality
+//     Bases: A list of base classes to be inherited into Derived, which are
+//            each also magic configs themselves.
+template <typename Derived, typename... Bases>
+struct JsonConfig : magic::Loader<JsonTraits, Derived, Bases...> {};
 
 }} // magic_config::json

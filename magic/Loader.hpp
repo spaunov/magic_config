@@ -14,24 +14,33 @@
 
 namespace magic_config { namespace magic {
 
-template <typename Derived, typename CTraits>
-class Loader : detail::AggregateConfigTag
+// Class:       Loader
+// Description: This class implements the automatic loading of configs
+//
+// Arguments:
+//   CTraits: Defining traits of the underlying config framework, e.g. yaml-cpp
+//   Derived: The top level config class which inherits this functionality
+//     Bases: A list of base classes to be inherited into Derived, which are
+//            each also magic configs themselves.
+
+template <typename CTraits, typename Derived, typename... Bases>
+class Loader : virtual detail::AggregateConfigTag, public Bases...
 {
 public:
     using Traits = CTraits;
+    using Self   = Loader<Traits, Derived, Bases...>;
     using Config = typename Traits::Config;
 
-    // Load the contents of the Config into the class
-    static Derived load(const Config& cfg) { return load<>(cfg); }
+    static_assert(traits::all_true_v<detail::is_magic_config<Bases>...>,
+                  "Each base class must be magic config");
 
-    // Helper class used to load this class and one or more base classes
-    template <typename... BaseClasses>
+    // Load the contents of the Config into the class
     static Derived load(const Config& cfg);
 
+protected:
     // Helper function to do the actual loading ...
     static void load(Derived* obj, const Config& cfg);
 
-protected:
     using Member         = detail::ClassMemberBase<Traits, Derived>;
     using MemberPtr      = std::unique_ptr< Member >;
     using PropertyCheck  = std::unique_ptr< IPropertyCheck<Derived> >;
@@ -71,12 +80,13 @@ protected:
 // =========================================================================
 // IMPLEMENTATION:
 
-template <typename Derived, typename CTraits>
-typename Loader<Derived, CTraits>::ClassMemberMap Loader<Derived, CTraits>::s_classMembers;
+template <typename CTraits, typename Derived, typename... Bases>
+typename Loader<CTraits, Derived, Bases...>::ClassMemberMap
+Loader<CTraits, Derived, Bases...>::s_classMembers;
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
-struct Loader<Derived, CTraits>::PropertyProxy
+struct Loader<CTraits, Derived, Bases...>::PropertyProxy
 {
     using iterator_t = typename ClassMemberMap::iterator;
 
@@ -108,10 +118,10 @@ private:
 };
 
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>
-Loader<Derived, CTraits>::assign(const char* cfgName, MemberType Derived::*member)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>
+Loader<CTraits, Derived, Bases...>::assign(const char* cfgName, MemberType Derived::*member)
 {
     using wrap_member = detail::ClassMember<Traits, Derived, MemberType>;
 
@@ -122,16 +132,17 @@ Loader<Derived, CTraits>::assign(const char* cfgName, MemberType Derived::*membe
     using namespace magic_config::detail;
 
     auto error = make_error_msg("Could not insert class memeber in ", type_to_str<Derived>());
+
     VERIFY_CONFIG<Traits>(result.second, error);
 
     return PropertyProxy<MemberType>(result.first);
 }
 
 // NOTE: Needed to appropriately handle pointers to base class members
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename BaseClass, typename MemberType>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>
-Loader<Derived, CTraits>::assign(const char* cfgName, MemberType BaseClass::*member)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>
+Loader<CTraits, Derived, Bases...>::assign(const char* cfgName, MemberType BaseClass::*member)
 {
     // std::cout << "Using alternative assign for \'" << cfgName << "\' in deduced base "
     //           << magic_config::detail::type_to_str<BaseClass>() << "\n";
@@ -141,24 +152,26 @@ Loader<Derived, CTraits>::assign(const char* cfgName, MemberType BaseClass::*mem
 
     // Cast to member to derived and forward the call
     auto asDerived = static_cast<MemberType Derived::*>(member);
-    return Loader<Derived, CTraits>::assign(cfgName, asDerived);
+
+    return Self::assign(cfgName, asDerived);
 }
 
-template <typename Derived, typename CTraits>
-template <typename... BaseClasses>
-Derived Loader<Derived, CTraits>::load(const Config& cfg)
+template <typename CTraits, typename Derived, typename... Bases>
+Derived Loader<CTraits, Derived, Bases...>::load(const Config& cfg)
 {
     Derived obj;
 
-    (BaseClasses::load(&obj, cfg),...);
+    // Load members associated with each of the base class magic configs
+    (Bases::load(&obj, cfg),...);
 
+    // Load members associated with this class
     load(&obj, cfg);
 
     return obj;
 }
 
-template <typename Derived, typename CTraits>
-void Loader<Derived, CTraits>::load(Derived* obj, const Config& cfg)
+template <typename CTraits, typename Derived, typename... Bases>
+void Loader<CTraits, Derived, Bases...>::load(Derived* obj, const Config& cfg)
 {
     static_assert(magic_config::traits::has_defineConfigMapping<Derived>::value,
                   "Derived must provide a static defineConfigMapping() method!");
@@ -173,16 +186,14 @@ void Loader<Derived, CTraits>::load(Derived* obj, const Config& cfg)
 
     for (auto& classMember : s_classMembers)
     {
-        const std::string& name = classMember.first;
-
-        auto& memberInfo = classMember.second;
+        const std::string& name       = classMember.first;
+        auto&              memberInfo = classMember.second;
 
         // Check if key is in the object dictionary:
         if (!Traits::isPresent(cfg, name)) {
             if (memberInfo.required) {
-                std::stringstream ss;
-                ss << "magic::Loader::load(): Missing key: " << name;
-                VERIFY_CONFIG<Traits>(false, ss.str(), &cfg);
+                auto error = make_error_msg("magic::Loader::load(): Missing key: ", name);
+                VERIFY_CONFIG<Traits>(false, error, &cfg);
             }
             else {
                 continue;
@@ -198,10 +209,10 @@ void Loader<Derived, CTraits>::load(Derived* obj, const Config& cfg)
 }
 
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>&
-Loader<Derived, CTraits>::PropertyProxy<MemberType>::range(MemberType min, MemberType max, bool inclusive)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>&
+Loader<CTraits, Derived, Bases...>::PropertyProxy<MemberType>::range(MemberType min, MemberType max, bool inclusive)
 {
     auto& memberInfo = m_it->second;
 
@@ -215,10 +226,10 @@ Loader<Derived, CTraits>::PropertyProxy<MemberType>::range(MemberType min, Membe
     return *this;
 }
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>&
-Loader<Derived, CTraits>::PropertyProxy<MemberType>::cardinality(size_t expectSize)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>&
+Loader<CTraits, Derived, Bases...>::PropertyProxy<MemberType>::cardinality(size_t expectSize)
 {
     auto& memberInfo = m_it->second;
 
@@ -233,11 +244,11 @@ Loader<Derived, CTraits>::PropertyProxy<MemberType>::cardinality(size_t expectSi
 }
 
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
 template <template <typename C, typename M> class UserDefinedCheck, typename... Args>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>&
-Loader<Derived, CTraits>::PropertyProxy<MemberType>::attach(Args&&... args)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>&
+Loader<CTraits, Derived, Bases...>::PropertyProxy<MemberType>::attach(Args&&... args)
 {
     auto& memberInfo = m_it->second;
 
@@ -252,10 +263,10 @@ Loader<Derived, CTraits>::PropertyProxy<MemberType>::attach(Args&&... args)
     return *this;
 }
 
-template <typename Derived, typename CTraits>
+template <typename CTraits, typename Derived, typename... Bases>
 template <typename MemberType>
-typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>&
-Loader<Derived, CTraits>::PropertyProxy<MemberType>::attach(std::function<void (const MemberType&)> action)
+typename Loader<CTraits, Derived, Bases...>::template PropertyProxy<MemberType>&
+Loader<CTraits, Derived, Bases...>::PropertyProxy<MemberType>::attach(std::function<void (const MemberType&)> action)
 {
     auto& memberInfo = m_it->second;
 

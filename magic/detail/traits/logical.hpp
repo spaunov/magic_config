@@ -44,4 +44,11 @@ struct StrictDisjunction
       std::is_same<Bools<Ts::value...>, Bools<(Ts::value && false)...>>
     > {};
 
+
+template<bool... Bs>
+using AllTrue = std::is_same<Bools<Bs..., true>, Bools<true, Bs...> >;
+
+template<bool... Bs>
+inline constexpr bool all_true_v = AllTrue<Bs...>::value;
+
 }  //namespace magic_config::traits
