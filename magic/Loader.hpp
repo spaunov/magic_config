@@ -22,10 +22,16 @@ public:
     using Config = typename Traits::Config;
 
     // Load the contents of the Config into the class
+    static Derived load(const Config& cfg) { return load<>(cfg); }
+
+    // Helper class used to load this class and one or more base classes
+    template <typename... BaseClasses>
     static Derived load(const Config& cfg);
 
-protected:
+    // Helper function to do the actual loading ...
+    static void load(Derived* obj, const Config& cfg);
 
+protected:
     using Member         = detail::ClassMemberBase<Traits, Derived>;
     using MemberPtr      = std::unique_ptr< Member >;
     using PropertyCheck  = std::unique_ptr< IPropertyCheck<Derived> >;
@@ -53,7 +59,6 @@ protected:
     // MemberType deduces the type of the 'Class' member variable
     //
     // NOTE: Returns a PropertyProxy which enables setting additional properties
-
     template <typename MemberType>
     static PropertyProxy<MemberType> assign(const char* cfgName, MemberType Derived::*member);
 
@@ -114,7 +119,10 @@ Loader<Derived, CTraits>::assign(const char* cfgName, MemberType Derived::*membe
 
     auto result = s_classMembers.emplace(cfgName, std::move(info));
 
-    VERIFY_CONFIG<Traits>(result.second, "Could not insert class memeber.");
+    using namespace magic_config::detail;
+
+    auto error = make_error_msg("Could not insert class memeber in ", type_to_str<Derived>());
+    VERIFY_CONFIG<Traits>(result.second, error);
 
     return PropertyProxy<MemberType>(result.first);
 }
@@ -125,7 +133,10 @@ template <typename BaseClass, typename MemberType>
 typename Loader<Derived, CTraits>::template PropertyProxy<MemberType>
 Loader<Derived, CTraits>::assign(const char* cfgName, MemberType BaseClass::*member)
 {
-    VERIFY_CONFIG<Traits>((std::is_base_of<BaseClass, Derived>::value),
+    // std::cout << "Using alternative assign for \'" << cfgName << "\' in deduced base "
+    //           << magic_config::detail::type_to_str<BaseClass>() << "\n";
+
+    VERIFY_CONFIG<Traits>((magic_config::traits::is_strict_base_of<BaseClass, Derived>::value),
                           "Pointer to member does not belong to a base class");
 
     // Cast to member to derived and forward the call
@@ -134,7 +145,20 @@ Loader<Derived, CTraits>::assign(const char* cfgName, MemberType BaseClass::*mem
 }
 
 template <typename Derived, typename CTraits>
+template <typename... BaseClasses>
 Derived Loader<Derived, CTraits>::load(const Config& cfg)
+{
+    Derived obj;
+
+    (BaseClasses::load(&obj, cfg),...);
+
+    load(&obj, cfg);
+
+    return obj;
+}
+
+template <typename Derived, typename CTraits>
+void Loader<Derived, CTraits>::load(Derived* obj, const Config& cfg)
 {
     static_assert(magic_config::traits::has_defineConfigMapping<Derived>::value,
                   "Derived must provide a static defineConfigMapping() method!");
@@ -145,7 +169,7 @@ Derived Loader<Derived, CTraits>::load(const Config& cfg)
     VERIFY_CONFIG<Traits>(Traits::isComplex(cfg),
                           "Type mismatch: object expected!", &cfg);
 
-    Derived result;
+    Derived& result = *obj;
 
     for (auto& classMember : s_classMembers)
     {
@@ -171,8 +195,6 @@ Derived Loader<Derived, CTraits>::load(const Config& cfg)
             property->check(result);
         }
     }
-
-    return result;
 }
 
 

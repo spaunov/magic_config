@@ -50,5 +50,15 @@ inline void VERIFY_CONFIG(bool                           predicate,
     }
 }
 
+// Create and error msg
+// NOTE: This is quite expensive and should only be used as part of initialization
+template <typename... Args>
+std::string make_error_msg(Args&&... args) {
+    std::stringstream ss;
+
+    (ss << ... << std::forward<Args>(args));
+
+    return ss.str();
+}
 
 } // magic_config

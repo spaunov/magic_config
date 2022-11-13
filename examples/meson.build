@@ -17,6 +17,22 @@ test('mc_example_basic_json', mc_example_basic_json)
 
 
 
+mc_example_inheritance_yaml = executable('mc_example_inheritance_yaml', 'Inheritance.cpp',
+				   include_directories : root_include,
+ 				   dependencies : [dep_yaml, dep_gtest])
+
+test('mc_example_inheritance_yaml', mc_example_inheritance_yaml)
+
+
+mc_example_inheritance_json = executable('mc_example_inheritance_json', 'Inheritance.cpp',
+				   include_directories : root_include,
+				   cpp_args : '-DMAGIC_CONFIG_EXAMPLES_USE_DYNAMIC_JSON',
+ 				   dependencies : [dep_folly, dep_gtest])
+
+test('mc_example_inheritance_json', mc_example_inheritance_json)
+
+
+
 mc_example_basic_validation_yaml = executable('mc_example_basic_validation_yaml', 'BasicValidation.cpp',
 					      include_directories : root_include,
  					      dependencies : [dep_yaml, dep_gtest])

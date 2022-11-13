@@ -1,8 +1,8 @@
 
-traits_test = executable('traits_test', 'traits.t.cpp',
+mc_traits_test = executable('mc_traits_test', 'traits.t.cpp',
 			 include_directories : root_include,
 			 dependencies : dep_gtest)
 
-test('traits_test', traits_test)
+test('mc_traits_test', mc_traits_test)
 
 subdir('traits')
