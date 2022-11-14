@@ -1,5 +1,8 @@
 #pragma once
 
+#include "detail/error.hpp"
+#include "detail/traits/optional.hpp"
+
 #include <stdexcept>
 #include <sstream>
 
@@ -76,7 +79,9 @@ private:
 template <typename Class, typename Member>
 void RangeCheck<Class, Member>::check(Class& obj)
 {
-    auto const& value = obj.*m_member;
+    if (!magic_config::has_value(obj.*m_member)) return;
+
+    auto const& value = magic_config::get(obj.*m_member);
 
     bool minFailed = m_inclusive ? value < m_min : value <= m_min;
     bool maxFailed = m_inclusive ? value > m_max : value >= m_max;
@@ -100,7 +105,9 @@ void RangeCheck<Class, Member>::check(Class& obj)
 template <typename Class, typename Member>
 void CardinalityCheck<Class, Member>::check(Class& obj)
 {
-    auto const& member = obj.*m_member;
+    if (!magic_config::has_value(obj.*m_member)) return;
+
+    auto const& member = magic_config::get(obj.*m_member);
 
     if (member.size() != m_size) {
         std::stringstream ss;

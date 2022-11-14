@@ -5,6 +5,7 @@
 #include "Setup.hpp"
 
 #include <string>
+#include <optional>
 #include <gtest/gtest.h>
 
 namespace magic_config { namespace examples {
@@ -20,7 +21,7 @@ struct EmployeeBase
 struct Employee : EmployeeBase
                 , MagicConfig<Employee>  // Derive from MagicConfig
 {
-    std::string phone;
+    std::optional<std::string> phone;
 
     // Define a config mapping for the Employee class
     //
@@ -52,7 +53,7 @@ TEST(MagicConfigExamples, basic)
 
         EXPECT_EQ(employee.name, "John Smith");
         EXPECT_EQ(employee.age, 35);
-        EXPECT_TRUE(employee.phone.empty());
+        EXPECT_TRUE(!employee.phone);
 
     } catch (std::exception& ex) {
         std::cout << "Exception caught: " << ex.what();

@@ -4,6 +4,10 @@
 //       The alias MagicConfig is used in the examples to refer to the configured type.
 #include "Setup.hpp"
 
+// Support for std::optional
+#include "../magic/detail/traits/optional.hpp"
+
+
 #include <string>
 #include <gtest/gtest.h>
 
@@ -30,10 +34,10 @@ struct Employee : MagicConfig<Employee>  // Derive from MagicConfig
     static constexpr const size_t ForcedRetirementAge = 75;
     static constexpr const size_t VotingAge           = 21;
 
-    std::string name;
-    size_t      age;
-    std::string phone;
-    bool        passed_post_validation = false;
+    std::string                name;
+    size_t                     age;
+    std::optional<std::string> phone;
+    bool                       passed_post_validation = false;
 
     // Define a config mapping for the Employee class. See below!
     static void defineConfigMapping();
@@ -66,11 +70,12 @@ void Employee::defineConfigMapping()
     // NOTE: Now let's attach a custom lambda function to check, well, anything
     // we want!!!
     Employee::assign("phone", &Employee::phone)
-        .required()
         .attach([](auto const& phone) {
             g_checked_phone_format = true;
 
-            if (phone.find('-') == std::string::npos) {
+            if (!phone) return; // nothing to do
+
+            if (phone->find('-') == std::string::npos) {
                 throw std::logic_error("Phone has no dashes!");
             }
         });
@@ -96,7 +101,12 @@ struct VotingAgeCheck : magic_config::IPropertyCheck<Class>
 
     // Check if the member value passes our voting age check
     void check(Class& obj) override {
-        auto& value   = obj.*m_member;
+        // NOTE: Use magic_config::has_value & magic_config::get to
+        //       ensure that the code works with std::optional
+
+        if (!magic_config::has_value(obj.*m_member)) return;
+
+        auto const& value = magic_config::get(obj.*m_member);
 
         g_checked_voting_age = true;
 
@@ -131,7 +141,7 @@ TEST(MagicConfigExamples, advanced_validation_passed)
 
         EXPECT_EQ(employee.name, "John Smith");
         EXPECT_EQ(employee.age, 35);
-        EXPECT_FALSE(employee.phone.empty());
+        EXPECT_TRUE(employee.phone.has_value());
         EXPECT_TRUE(employee.passed_post_validation);
 
     } catch (std::exception& ex) {

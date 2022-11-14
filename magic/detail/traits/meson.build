@@ -1,13 +1,20 @@
 
-define_trait_test = executable('define_trait', 'define_trait.t.cpp',
+mc_define_trait_test = executable('mc_define_trait', 'define_trait.t.cpp',
 			       include_directories : root_include,
 			       dependencies : dep_gtest)
 
-test('define_trait_test', define_trait_test)
+test('mc_define_trait_test', mc_define_trait_test)
 
 
-container_traits_test = executable('container_traits', 'container_traits.t.cpp',
+mc_optional_test = executable('mc_optional', 'optional.t.cpp',
+			       include_directories : root_include,
+			       dependencies : dep_gtest)
+
+test('mc_optional_test', mc_optional_test)
+
+
+mc_container_traits_test = executable('mc_container_traits', 'container_traits.t.cpp',
 				   include_directories : root_include,
 				   dependencies : dep_gtest)
 
-test('container_traits_test', container_traits_test)
+test('mc_container_traits_test', mc_container_traits_test)

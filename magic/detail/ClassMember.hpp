@@ -26,7 +26,14 @@ struct ClassMember : ClassMemberBase<Traits, Class>
 
     void set(Class& obj, const Config& cfg) override
     {
-        obj.*m_member = convert<Traits, MemberType>(cfg);
+        if constexpr (magic_config::traits::is_optional_v<MemberType>) {
+            using value_type = typename MemberType::value_type;
+
+            obj.*m_member = convert<Traits, value_type>(cfg);
+        }
+        else {
+            obj.*m_member = convert<Traits, MemberType>(cfg);
+        }
 
         if constexpr (magic_config::traits::has_verify_config<Class, Config>::value) {
             bool ok = obj.verify_config(cfg);

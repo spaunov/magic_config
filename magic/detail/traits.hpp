@@ -2,6 +2,7 @@
 
 #include "traits/define_trait.hpp"
 #include "traits/supported_types.hpp"
+#include "traits/optional.hpp"
 #include "traits/features.hpp"
 #include "traits/container_traits.hpp"
 
